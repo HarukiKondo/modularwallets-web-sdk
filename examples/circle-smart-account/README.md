@@ -12,6 +12,10 @@ Before you start to run the app, you need to make sure that all environment vari
 
 Make a copy of `.env.example` and rename it to `.env`.
 
+```bash
+cp .env.example .env
+```
+
 Under `.env`, make sure the following environment variables are configured properly:
 
 - `VITE_CLIENT_KEY`: Paste your Client Key here. You can create one in [Circle Developer Console](https://console.circle.com/wallets/modular/configurator).
