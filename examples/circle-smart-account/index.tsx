@@ -24,27 +24,28 @@ const clientKey = import.meta.env.VITE_CLIENT_KEY as string;
 const clientUrl = import.meta.env.VITE_CLIENT_URL as string;
 
 const USDC_DECIMALS = 6;
-const CHAIN = "arcTestnet"
+// 対象のチェーン
+const CHAIN = "arcTestnet";
 
 // Create Circle transports
 const passkeyTransport = toPasskeyTransport(clientUrl, clientKey);
-const modularTransport = toModularTransport(
-	`${clientUrl}/${CHAIN}`,
-	clientKey,
-);
+const modularTransport = toModularTransport(`${clientUrl}/${CHAIN}`, clientKey);
 
 // Create a public client
 const client = createPublicClient({
-	chain: polygonAmoy,
+	chain: arcTestnet,
 	transport: modularTransport,
 });
 
 // Create a bundler client
 const bundlerClient = createBundlerClient({
-	chain: polygonAmoy,
+	chain: arcTestnet,
 	transport: modularTransport,
 });
 
+/**
+ * Example Component
+ */
 function Example() {
 	const [account, setAccount] = React.useState<SmartAccount>();
 	const [credential, setCredential] = React.useState<P256Credential>(() =>
@@ -58,6 +59,7 @@ function Example() {
 	const [userOpHash, setUserOpHash] = React.useState<Hex>();
 
 	React.useEffect(() => {
+		// パスキー認証用のクレデンシャル情報がない場合は、パスキー認証の登録とスマートウォレットを作成する
 		if (!credential) return;
 
 		// Create a circle smart account
@@ -68,33 +70,47 @@ function Example() {
 		}).then(setAccount);
 	}, [credential]);
 
+	/**
+	 * 登録用のメソッド
+	 */
 	const register = async () => {
 		const username = (document.getElementById("username") as HTMLInputElement)
 			.value;
+		// パスキー認証の登録
 		const credential = await toWebAuthnCredential({
 			transport: passkeyTransport,
 			mode: WebAuthnMode.Register,
 			username,
 		});
+		// ブラウザのローカルストレージに保管する
 		localStorage.setItem("credential", JSON.stringify(credential));
 		localStorage.setItem("username", username);
 		setCredential(credential);
 		setUsername(username);
 	};
 
+	/**
+	 * 認証用のメソッド
+	 */
 	const login = async () => {
+		// パスキー認証でログインするメソッド
 		const credential = await toWebAuthnCredential({
 			transport: passkeyTransport,
 			mode: WebAuthnMode.Login,
 		});
+		// 認証情報をローカルストレージに保管する
 		localStorage.setItem("credential", JSON.stringify(credential));
 		setCredential(credential);
-	};
+	};	
 
+	/**
+	 * ユーザーオペレーションを作成＆送信するメソッド
+	 */
 	const sendUserOperation = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (!account) return;
 
+		// 宛先ウォレットアドレスと送金額を指定する
 		const formData = new FormData(event.currentTarget);
 		const to = formData.get("to") as `0x${string}`;
 		const value = formData.get("value") as string;
@@ -104,8 +120,9 @@ function Example() {
 			to,
 			ContractAddress.PolygonAmoy_USDC,
 			parseUnits(value, USDC_DECIMALS),
-		);
-
+		);	
+		
+		// ユーザーオペレーションを作成
 		const hash = await bundlerClient.sendUserOperation({
 			account,
 			calls: [callData],
@@ -113,6 +130,7 @@ function Example() {
 		});
 		setUserOpHash(hash);
 
+		// 送金する
 		const { receipt } = await bundlerClient.waitForUserOperationReceipt({
 			hash,
 		});
@@ -147,6 +165,7 @@ function Example() {
 	);
 }
 
+// root要素にExample コンポーネントをレンダリング
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 	<Example />,
 );
